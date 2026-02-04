@@ -46,7 +46,7 @@ export function ResultsScreen({
   const [actionMessage, setActionMessage] = useState("")
   const themeClasses = getThemeClasses(currentTheme)
 
-  const shareText = `I scored ${results.percentage}% (${results.correct}/${results.total}) on ExamMaster Pro.`
+  const shareText = `I scored ${results.percentage}% (${results.correct}/${results.total}) on Prepwise.`
 
   const handleShare = async () => {
     try {

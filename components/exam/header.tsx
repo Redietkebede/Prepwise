@@ -66,7 +66,7 @@ export function ExamHeader({
             <div className="flex items-center gap-2">
               <Brain className="h-8 w-8 text-blue-500" />
               <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">
-                ExamMaster Pro
+                Prepwise
               </h1>
             </div>
             {examStarted && !showResults && (
@@ -107,7 +107,7 @@ export function ExamHeader({
 
             <Select
               value={currentTheme.name}
-              onValueChange={(value) => setCurrentTheme(THEMES.find((t) => t.name === value) || THEMES[0])}
+              onValueChange={(value: string) => setCurrentTheme(THEMES.find((t) => t.name === value) || THEMES[0])}
             >
               <SelectTrigger className="w-24">
                 <Palette className="h-4 w-4" />
