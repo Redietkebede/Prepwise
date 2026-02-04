@@ -40,12 +40,6 @@ export interface Achievement {
   icon: LucideIcon
 }
 
-export interface CategoryData {
-  icon: LucideIcon
-  color: string
-  questions: Question[]
-}
-
 export interface ExamMode {
   value: "practice" | "timed" | "survival"
   label: string

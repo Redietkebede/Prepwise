@@ -2,16 +2,42 @@
 
 import { useState, useEffect, useCallback, useRef } from "react"
 import { Question, ExamStats, Theme } from "@/lib/exam/types"
-import { THEMES, EXAM_DATA, DEFAULT_STATS } from "@/lib/exam/data"
+import { THEMES, DEFAULT_STATS } from "@/lib/exam/data"
 import { calculateResults, checkAchievements, playSound } from "@/lib/exam/utils"
+import { toast } from "sonner"
+
+interface GenerateQuestionsResponse {
+  questions: Question[]
+  error?: string
+  details?: string
+  modelUsed?: string
+  fallbackUsed?: boolean
+}
+
+interface OpenRouterConfigResponse {
+  defaultModel?: string
+  allowedModels?: string[]
+  remainingCredits?: number | null
+  remainingQuestionsByModel?: Record<string, number>
+}
 
 export function useExam() {
   const hasFinalizedRef = useRef(false)
   const [darkMode, setDarkMode] = useState(false)
   const [currentTheme, setCurrentTheme] = useState<Theme>(THEMES[0])
-  const [selectedCategory, setSelectedCategory] = useState<string>("all")
-  const [difficulty, setDifficulty] = useState<string>("all")
+  const [difficulty, setDifficulty] = useState<string>("mixed")
   const [examMode, setExamMode] = useState<"practice" | "timed" | "survival">("practice")
+  const [generationPrompt, setGenerationPrompt] = useState("General knowledge")
+  const [questionCount, setQuestionCount] = useState(10)
+  const [aiModel, setAiModel] = useState("")
+  const [allowedModels, setAllowedModels] = useState<string[]>([])
+  const [remainingCredits, setRemainingCredits] = useState<number | null>(null)
+  const [remainingQuestionsByModel, setRemainingQuestionsByModel] = useState<Record<string, number>>({})
+  const [isModelConfigLoading, setIsModelConfigLoading] = useState(true)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [generationError, setGenerationError] = useState("")
+  const [generationCooldownLeft, setGenerationCooldownLeft] = useState(0)
+
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [selectedAnswers, setSelectedAnswers] = useState<{ [key: number]: number }>({})
   const [showResults, setShowResults] = useState(false)
@@ -28,36 +54,50 @@ export function useExam() {
   const [questions, setQuestions] = useState<Question[]>([])
   const [activeTab, setActiveTab] = useState("exam")
 
-  // Load stats from localStorage
   useEffect(() => {
-    const savedStats = localStorage.getItem("examStats")
-    if (savedStats) {
-      setStats(JSON.parse(savedStats))
-    }
-  }, [])
+    if (generationCooldownLeft <= 0) return
+    const timer = setInterval(() => {
+      setGenerationCooldownLeft((prev) => Math.max(prev - 1, 0))
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [generationCooldownLeft])
 
-  // Save stats to localStorage
   useEffect(() => {
-    localStorage.setItem("examStats", JSON.stringify(stats))
-  }, [stats])
+    const loadModelConfig = async () => {
+      try {
+        const response = await fetch("/api/config/openrouter")
+        const data = (await response.json()) as OpenRouterConfigResponse
+        if (response.ok) {
+          const backendDefaultModel = data.defaultModel || "openai/gpt-4o-mini"
+          const backendAllowedModels =
+            Array.isArray(data.allowedModels) && data.allowedModels.length > 0
+              ? data.allowedModels
+              : [backendDefaultModel]
 
-  // Generate questions based on filters
-  useEffect(() => {
-    let allQuestions: Question[] = []
-
-    Object.entries(EXAM_DATA.categories).forEach(([categoryName, categoryData]) => {
-      if (selectedCategory === "all" || selectedCategory === categoryName) {
-        allQuestions = [...allQuestions, ...categoryData.questions]
+          setAllowedModels(backendAllowedModels)
+          setAiModel(
+            backendAllowedModels.includes(backendDefaultModel)
+              ? backendDefaultModel
+              : backendAllowedModels[0]
+          )
+          setRemainingCredits(
+            typeof data.remainingCredits === "number" ? data.remainingCredits : null
+          )
+          setRemainingQuestionsByModel(data.remainingQuestionsByModel || {})
+        } else {
+          setAiModel("openai/gpt-4o-mini")
+          setAllowedModels(["openai/gpt-4o-mini"])
+        }
+      } catch {
+        setAiModel("openai/gpt-4o-mini")
+        setAllowedModels(["openai/gpt-4o-mini"])
+      } finally {
+        setIsModelConfigLoading(false)
       }
-    })
-
-    if (difficulty !== "all") {
-      allQuestions = allQuestions.filter((q) => q.difficulty === difficulty)
     }
 
-    allQuestions = allQuestions.sort(() => Math.random() - 0.5)
-    setQuestions(allQuestions)
-  }, [selectedCategory, difficulty])
+    void loadModelConfig()
+  }, [])
 
   const updateStats = useCallback(() => {
     const results = calculateResults(questions, selectedAnswers)
@@ -80,9 +120,7 @@ export function useExam() {
       totalExams: prevStats.totalExams + 1,
       totalQuestions: prevStats.totalQuestions + questions.length,
       correctAnswers: prevStats.correctAnswers + results.correct,
-      averageScore: Math.round(
-        (prevStats.averageScore * prevStats.totalExams + results.percentage) / (prevStats.totalExams + 1)
-      ),
+      averageScore: Math.round((prevStats.averageScore * prevStats.totalExams + results.percentage) / (prevStats.totalExams + 1)),
       bestScore: Math.max(prevStats.bestScore, results.percentage),
       streak: Math.max(prevStats.streak, currentStreak),
       categoryStats: Object.entries(categoryStatsDelta).reduce(
@@ -111,7 +149,6 @@ export function useExam() {
     updateStats()
   }, [soundEnabled, updateStats])
 
-  // Main timer
   useEffect(() => {
     if (examStarted && timeLeft > 0 && !showResults && examMode === "timed") {
       const timer = setInterval(() => {
@@ -127,7 +164,6 @@ export function useExam() {
     }
   }, [examStarted, timeLeft, showResults, examMode, finalizeExam])
 
-  // Question timer
   useEffect(() => {
     if (examStarted && questionTimeLeft > 0 && !showResults && questions[currentQuestion]?.timeLimit) {
       const timer = setInterval(() => {
@@ -148,7 +184,6 @@ export function useExam() {
     }
   }, [examStarted, questionTimeLeft, showResults, currentQuestion, questions, finalizeExam])
 
-  // Set question timer when question changes
   useEffect(() => {
     if (examStarted && questions[currentQuestion]?.timeLimit) {
       setQuestionTimeLeft(questions[currentQuestion].timeLimit)
@@ -189,22 +224,84 @@ export function useExam() {
   }, [showResults, currentQuestion, examMode, questions, soundEnabled, finalizeExam])
 
   const goToQuestion = useCallback((index: number) => {
+    if (index < 0 || index >= questions.length) return
     setCurrentQuestion(index)
     setShowExplanation(false)
     setShowHint(false)
-  }, [])
+  }, [questions.length])
 
-  const startExam = useCallback(() => {
-    hasFinalizedRef.current = false
-    setExamStarted(true)
-    setExamStartTime(Date.now())
-    if (examMode === "timed") {
-      setTimeLeft(questions.length * 60)
+  const startExam = useCallback(async () => {
+    if (generationCooldownLeft > 0) {
+      toast.error(`Please wait ${generationCooldownLeft}s before generating again.`)
+      return
     }
-    if (questions[0]?.timeLimit) {
-      setQuestionTimeLeft(questions[0].timeLimit)
+
+    setIsGenerating(true)
+    setGenerationError("")
+
+    try {
+      const response = await fetch("/api/questions/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: generationPrompt,
+          count: questionCount,
+          difficulty,
+          model: aiModel,
+        }),
+      })
+
+      const data = (await response.json()) as GenerateQuestionsResponse
+      if (!response.ok) {
+        if (response.status === 429) {
+          setGenerationCooldownLeft(20)
+        }
+        throw new Error(data.error || "Failed to generate questions")
+      }
+
+      if (!Array.isArray(data.questions) || data.questions.length === 0) {
+        throw new Error("No questions returned from AI")
+      }
+
+      hasFinalizedRef.current = false
+      setQuestions(data.questions)
+      setCurrentQuestion(0)
+      setSelectedAnswers({})
+      setShowResults(false)
+      setCurrentStreak(0)
+      setShowExplanation(false)
+      setShowHint(false)
+      setBookmarkedQuestions(new Set())
+      setExamStarted(true)
+      setExamStartTime(Date.now())
+
+      if (examMode === "timed") {
+        setTimeLeft(data.questions.length * 60)
+      } else {
+        setTimeLeft(0)
+      }
+
+      if (data.questions[0]?.timeLimit) {
+        setQuestionTimeLeft(data.questions[0].timeLimit)
+      } else {
+        setQuestionTimeLeft(0)
+      }
+
+      if (data.fallbackUsed && data.modelUsed) {
+        toast.message(`Rate limit avoided: switched to ${data.modelUsed}`)
+      } else {
+        toast.success("Questions generated successfully.")
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to generate questions"
+      setGenerationError(message)
+      toast.error(message)
+      setExamStarted(false)
+      setQuestions([])
+    } finally {
+      setIsGenerating(false)
     }
-  }, [examMode, questions])
+  }, [generationPrompt, questionCount, difficulty, aiModel, examMode, generationCooldownLeft])
 
   const submitExam = useCallback(() => {
     finalizeExam(true)
@@ -238,16 +335,23 @@ export function useExam() {
   const resetStats = useCallback(() => {
     hasFinalizedRef.current = false
     setStats(DEFAULT_STATS)
-    localStorage.removeItem("examStats")
   }, [])
 
   return {
-    // State
     darkMode,
     currentTheme,
-    selectedCategory,
     difficulty,
     examMode,
+    generationPrompt,
+    questionCount,
+    aiModel,
+    allowedModels,
+    remainingCredits,
+    remainingQuestionsByModel,
+    isModelConfigLoading,
+    isGenerating,
+    generationError,
+    generationCooldownLeft,
     currentQuestion,
     selectedAnswers,
     showResults,
@@ -262,16 +366,16 @@ export function useExam() {
     stats,
     questions,
     activeTab,
-    // Setters
     setDarkMode,
     setCurrentTheme,
-    setSelectedCategory,
     setDifficulty,
     setExamMode,
+    setGenerationPrompt,
+    setQuestionCount,
+    setAiModel,
     setSoundEnabled,
     setShowHint,
     setActiveTab,
-    // Actions
     handleAnswerSelect,
     goToQuestion,
     startExam,

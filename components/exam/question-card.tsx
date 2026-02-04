@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Question, Theme } from "@/lib/exam/types"
-import { EXAM_DATA } from "@/lib/exam/data"
 import { formatTime, getDifficultyBadgeColor } from "@/lib/exam/utils"
 import { getThemeClasses } from "@/lib/exam/theme-classes"
 
@@ -53,7 +52,6 @@ export function QuestionCard({
   onNext,
   onSubmit,
 }: QuestionCardProps) {
-  const categoryData = EXAM_DATA.categories[question.category as keyof typeof EXAM_DATA.categories]
   const themeClasses = getThemeClasses(currentTheme)
 
   return (
@@ -69,7 +67,7 @@ export function QuestionCard({
                 {question.difficulty}
               </Badge>
               <Badge variant="outline">+{question.points} points</Badge>
-              <Badge variant="outline" className={categoryData?.color}>
+              <Badge variant="outline" className="text-slate-600 dark:text-slate-200">
                 {question.category}
               </Badge>
             </div>

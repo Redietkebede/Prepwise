@@ -4,7 +4,6 @@ import { Trophy, TrendingUp, Target, Zap } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { ExamStats } from "@/lib/exam/types"
-import { EXAM_DATA } from "@/lib/exam/data"
 
 interface StatsTabProps {
   stats: ExamStats
@@ -12,6 +11,8 @@ interface StatsTabProps {
 }
 
 export function StatsTab({ stats, darkMode }: StatsTabProps) {
+  const categoryEntries = Object.entries(stats.categoryStats)
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -69,30 +70,29 @@ export function StatsTab({ stats, darkMode }: StatsTabProps) {
           <CardTitle className={`${darkMode ? "text-white" : ""}`}>Category Performance</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {Object.entries(EXAM_DATA.categories).map(([name, data]) => {
-              const categoryStats = stats.categoryStats[name] || { correct: 0, total: 0 }
-              const percentage =
-                categoryStats.total > 0 ? Math.round((categoryStats.correct / categoryStats.total) * 100) : 0
+          {categoryEntries.length === 0 ? (
+            <p className={`${darkMode ? "text-gray-300" : "text-gray-600"}`}>No category stats yet. Complete an exam first.</p>
+          ) : (
+            <div className="space-y-4">
+              {categoryEntries.map(([name, categoryStats]) => {
+                const percentage = categoryStats.total > 0 ? Math.round((categoryStats.correct / categoryStats.total) * 100) : 0
 
-              return (
-                <div key={name} className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <data.icon className={`h-5 w-5 ${data.color}`} />
+                return (
+                  <div key={name} className="flex items-center justify-between">
                     <span className={darkMode ? "text-white" : ""}>{name}</span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="w-32">
-                      <Progress value={percentage} className="h-2" />
+                    <div className="flex items-center gap-4">
+                      <div className="w-32">
+                        <Progress value={percentage} className="h-2" />
+                      </div>
+                      <span className={`text-sm font-medium ${darkMode ? "text-white" : ""}`}>
+                        {percentage}% ({categoryStats.correct}/{categoryStats.total})
+                      </span>
                     </div>
-                    <span className={`text-sm font-medium ${darkMode ? "text-white" : ""}`}>
-                      {percentage}% ({categoryStats.correct}/{categoryStats.total})
-                    </span>
                   </div>
-                </div>
-              )
-            })}
-          </div>
+                )
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

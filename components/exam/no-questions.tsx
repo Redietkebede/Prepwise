@@ -17,7 +17,7 @@ export function NoQuestions({ darkMode }: NoQuestionsProps) {
             No Questions Available
           </h2>
           <p className={`${darkMode ? "text-gray-300" : "text-gray-600"}`}>
-            Please select a different category or difficulty level.
+            Generate questions first from the Exam tab.
           </p>
         </CardContent>
       </Card>

@@ -21,12 +21,23 @@ export default function ExamPlatform() {
     setDarkMode,
     currentTheme,
     setCurrentTheme,
-    selectedCategory,
-    setSelectedCategory,
     difficulty,
     setDifficulty,
     examMode,
     setExamMode,
+    generationPrompt,
+    setGenerationPrompt,
+    questionCount,
+    setQuestionCount,
+    aiModel,
+    allowedModels,
+    remainingCredits,
+    remainingQuestionsByModel,
+    setAiModel,
+    isModelConfigLoading,
+    isGenerating,
+    generationError,
+    generationCooldownLeft,
     currentQuestion,
     selectedAnswers,
     showResults,
@@ -52,10 +63,6 @@ export default function ExamPlatform() {
     toggleBookmark,
     resetStats,
   } = useExam()
-
-  if (questions.length === 0) {
-    return <NoQuestions darkMode={darkMode} />
-  }
 
   const results = calculateResults(questions, selectedAnswers)
   const currentQuestionData = questions[currentQuestion]
@@ -92,13 +99,23 @@ export default function ExamPlatform() {
               <StartScreen
                 darkMode={darkMode}
                 currentTheme={currentTheme}
-                selectedCategory={selectedCategory}
-                setSelectedCategory={setSelectedCategory}
+                generationPrompt={generationPrompt}
+                setGenerationPrompt={setGenerationPrompt}
+                questionCount={questionCount}
+                setQuestionCount={setQuestionCount}
+                aiModel={aiModel}
+                allowedModels={allowedModels}
+                remainingCredits={remainingCredits}
+                remainingQuestionsForModel={remainingQuestionsByModel[aiModel]}
+                setAiModel={setAiModel}
+                isModelConfigLoading={isModelConfigLoading}
                 difficulty={difficulty}
                 setDifficulty={setDifficulty}
                 examMode={examMode}
                 setExamMode={setExamMode}
-                questionsCount={questions.length}
+                isGenerating={isGenerating}
+                generationError={generationError}
+                generationCooldownLeft={generationCooldownLeft}
                 stats={stats}
                 onStart={startExam}
               />
@@ -114,6 +131,8 @@ export default function ExamPlatform() {
                 onToggleBookmark={toggleBookmark}
                 onReset={resetExam}
               />
+            ) : questions.length === 0 ? (
+              <NoQuestions darkMode={darkMode} />
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 <div className="lg:col-span-1">
