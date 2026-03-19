@@ -33,18 +33,17 @@ It supports multiple exam modes (practice/timed/survival), category & difficulty
 ### Prerequisites
 
 - Node.js (recommend a modern LTS)
-- pnpm
 
 ### Install
 
 ```bash
-pnpm install
+npm install
 ```
 
 ### Run the dev server
 
 ```bash
-pnpm dev
+npm run dev
 ```
 
 Then open `http://localhost:3000`.
@@ -52,14 +51,14 @@ Then open `http://localhost:3000`.
 ### Build / Start
 
 ```bash
-pnpm build
-pnpm start
+npm run build
+npm run start
 ```
 
 ### Lint
 
 ```bash
-pnpm lint
+npm run lint
 ```
 
 ## Where Things Live
