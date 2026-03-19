@@ -18,7 +18,7 @@ It supports multiple exam modes (practice/timed/survival), category & difficulty
 
 ## Tech Stack
 
-- **Framework**: Next.js 15 (App Router)
+- **Framework**: Next.js 16 (App Router)
 - **Language**: TypeScript
 - **UI**: React 19, shadcn/ui (Radix UI), Tailwind CSS + `tailwindcss-animate`
 - **Forms & validation (available)**: React Hook Form + Zod

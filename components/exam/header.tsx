@@ -66,7 +66,7 @@ export function ExamHeader({
             <div className="flex items-center gap-2">
               <Brain className="h-8 w-8 text-blue-500" />
               <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">
-                Prepwise
+                Demo Examination Platform
               </h1>
             </div>
             {examStarted && !showResults && (

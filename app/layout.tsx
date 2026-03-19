@@ -4,7 +4,7 @@ import { Toaster } from '@/components/ui/sonner'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Prepwise',
+  title: 'Demo Examination Platform',
   
   icons: {
     icon: [
