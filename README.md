@@ -100,8 +100,6 @@ Minimal example:
 }
 ```
 
-Note: there is also a sample dataset at `data/questions.json`, but it is not currently wired into the app.
-
 ## Notes
 
 - `next.config.mjs` is configured with `typescript.ignoreBuildErrors: true`, meaning production builds won’t fail on TypeScript errors. If you want stricter CI/builds, consider turning that off.
