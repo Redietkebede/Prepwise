@@ -137,7 +137,7 @@ async function saveToSupabase(questions: Question[], topic: string, difficulty: 
     time_limit: question.timeLimit ?? null,
   }))
 
-  const response = await fetch(`${supabaseUrl}/rest/v1/generated_questions`, {
+  const response = await fetch(`${supabaseUrl}/rest/v1/generated_questions_rows`, {
     method: "POST",
     headers: {
       apikey: serviceRoleKey,

@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server"
 
 interface OpenRouterAuthKeyResponse {
-  data?: Record<string, unknown>
+  data?: {
+    limit?: number | null
+    usage?: number | null
+    limit_remaining?: number | null
+    remaining_credits?: number | null
+    credits_remaining?: number | null
+    remaining?: number | null
+  }
 }
 
 interface OpenRouterModelsResponse {
@@ -12,6 +19,13 @@ interface OpenRouterModelsResponse {
       completion?: string | number
     }
   }>
+}
+
+interface OpenRouterCreditsResponse {
+  data?: {
+    total_credits?: number | string | null
+    total_usage?: number | string | null
+  }
 }
 
 const ESTIMATED_PROMPT_TOKENS_PER_QUESTION = 150
@@ -46,6 +60,17 @@ function extractRemainingCredits(payload: OpenRouterAuthKeyResponse): number | n
   return null
 }
 
+function extractRemainingCreditsFromBalance(payload: OpenRouterCreditsResponse): number | null {
+  const data = payload.data
+  if (!data) return null
+
+  const totalCredits = numberOrNull(data.total_credits)
+  const totalUsage = numberOrNull(data.total_usage)
+
+  if (totalCredits === null || totalUsage === null) return null
+  return Math.max(totalCredits - totalUsage, 0)
+}
+
 function getModelCostPerQuestion(
   modelId: string,
   modelsPayload: OpenRouterModelsResponse | null
@@ -78,8 +103,12 @@ export async function GET() {
 
   if (apiKey) {
     try {
-      const [authResponse, modelsResponse] = await Promise.all([
-        fetch("https://openrouter.ai/api/v1/auth/key", {
+      const [authResponse, creditsResponse, modelsResponse] = await Promise.all([
+        fetch("https://openrouter.ai/api/v1/key", {
+          headers: { Authorization: `Bearer ${apiKey}` },
+          cache: "no-store",
+        }),
+        fetch("https://openrouter.ai/api/v1/credits", {
           headers: { Authorization: `Bearer ${apiKey}` },
           cache: "no-store",
         }),
@@ -92,12 +121,18 @@ export async function GET() {
       const authPayload = authResponse.ok
         ? ((await authResponse.json()) as OpenRouterAuthKeyResponse)
         : null
+      const creditsPayload = creditsResponse.ok
+        ? ((await creditsResponse.json()) as OpenRouterCreditsResponse)
+        : null
       const modelsPayload = modelsResponse.ok
         ? ((await modelsResponse.json()) as OpenRouterModelsResponse)
         : null
 
       if (authPayload) {
         remainingCredits = extractRemainingCredits(authPayload)
+      }
+      if (remainingCredits === null && creditsPayload) {
+        remainingCredits = extractRemainingCreditsFromBalance(creditsPayload)
       }
 
       if (remainingCredits !== null) {

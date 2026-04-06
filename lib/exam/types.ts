@@ -55,3 +55,12 @@ export interface ExamResults {
   totalPoints: number
   earnedPoints: number
 }
+
+export interface LastExamStats {
+  percentage: number
+  correct: number
+  total: number
+  earnedPoints: number
+  mode: "practice" | "timed" | "survival"
+  completedAt: number
+}

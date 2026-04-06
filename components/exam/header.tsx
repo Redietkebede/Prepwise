@@ -7,29 +7,13 @@ import {
   Zap,
   Target,
   Brain,
-  Palette,
-  Volume2,
-  VolumeX,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select"
-import { Theme } from "@/lib/exam/types"
-import { THEMES } from "@/lib/exam/data"
 import { formatTime } from "@/lib/exam/utils"
-import { getThemeClasses } from "@/lib/exam/theme-classes"
 
 interface ExamHeaderProps {
   darkMode: boolean
   setDarkMode: (value: boolean) => void
-  currentTheme: Theme
-  setCurrentTheme: (theme: Theme) => void
-  soundEnabled: boolean
-  setSoundEnabled: (value: boolean) => void
   examStarted: boolean
   showResults: boolean
   examMode: "practice" | "timed" | "survival"
@@ -42,10 +26,6 @@ interface ExamHeaderProps {
 export function ExamHeader({
   darkMode,
   setDarkMode,
-  currentTheme,
-  setCurrentTheme,
-  soundEnabled,
-  setSoundEnabled,
   examStarted,
   showResults,
   examMode,
@@ -96,34 +76,6 @@ export function ExamHeader({
           </div>
 
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSoundEnabled(!soundEnabled)}
-              className={darkMode ? "border-gray-600 hover:bg-gray-700" : ""}
-            >
-              {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-            </Button>
-
-            <Select
-              value={currentTheme.name}
-              onValueChange={(value: string) => setCurrentTheme(THEMES.find((t) => t.name === value) || THEMES[0])}
-            >
-              <SelectTrigger className="w-24">
-                <Palette className="h-4 w-4" />
-              </SelectTrigger>
-              <SelectContent>
-                {THEMES.map((theme) => (
-                  <SelectItem key={theme.name} value={theme.name}>
-                    <div className="flex items-center gap-2">
-                      <div className={["w-3 h-3 rounded-full", getThemeClasses(theme).primary.bg500].join(" ")} />
-                      {theme.name}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
             <Button
               variant="outline"
               size="sm"

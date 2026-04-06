@@ -93,36 +93,3 @@ export const checkAchievements = (
 
   return newAchievements
 }
-
-export const playSound = (type: "correct" | "incorrect" | "complete", soundEnabled: boolean): void => {
-  if (!soundEnabled) return
-
-  const audioContext = new (window.AudioContext || (window as typeof window & { webkitAudioContext: typeof AudioContext }).webkitAudioContext)()
-  const oscillator = audioContext.createOscillator()
-  const gainNode = audioContext.createGain()
-
-  oscillator.connect(gainNode)
-  gainNode.connect(audioContext.destination)
-
-  switch (type) {
-    case "correct":
-      oscillator.frequency.setValueAtTime(800, audioContext.currentTime)
-      oscillator.frequency.setValueAtTime(1000, audioContext.currentTime + 0.1)
-      break
-    case "incorrect":
-      oscillator.frequency.setValueAtTime(300, audioContext.currentTime)
-      oscillator.frequency.setValueAtTime(200, audioContext.currentTime + 0.1)
-      break
-    case "complete":
-      oscillator.frequency.setValueAtTime(600, audioContext.currentTime)
-      oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.1)
-      oscillator.frequency.setValueAtTime(1000, audioContext.currentTime + 0.2)
-      break
-  }
-
-  gainNode.gain.setValueAtTime(0.1, audioContext.currentTime)
-  gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3)
-
-  oscillator.start(audioContext.currentTime)
-  oscillator.stop(audioContext.currentTime + 0.3)
-}

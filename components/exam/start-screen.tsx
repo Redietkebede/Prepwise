@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Theme, ExamStats } from "@/lib/exam/types"
+import { Theme, LastExamStats } from "@/lib/exam/types"
 import { getThemeClasses } from "@/lib/exam/theme-classes"
 
 interface StartScreenProps {
@@ -35,7 +35,7 @@ interface StartScreenProps {
   isGenerating: boolean
   generationError: string
   generationCooldownLeft: number
-  stats: ExamStats
+  lastExam: LastExamStats | null
   onStart: () => void
 }
 
@@ -65,10 +65,24 @@ export function StartScreen({
   isGenerating,
   generationError,
   generationCooldownLeft,
-  stats,
+  lastExam,
   onStart,
 }: StartScreenProps) {
   const themeClasses = getThemeClasses(currentTheme)
+  const formattedCredits =
+    typeof remainingCredits === "number"
+      ? remainingCredits > 0 && remainingCredits < 0.01
+        ? "<0.01"
+        : remainingCredits.toFixed(2)
+      : null
+  const formattedQuestionEstimate =
+    typeof remainingQuestionsForModel === "number"
+      ? remainingQuestionsForModel > 0
+        ? String(remainingQuestionsForModel)
+        : typeof remainingCredits === "number" && remainingCredits > 0
+          ? "<1"
+          : "0"
+      : null
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -143,8 +157,8 @@ export function StartScreen({
                   </SelectContent>
                 </Select>
                 <p className={`text-xs ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
-                  {typeof remainingQuestionsForModel === "number"
-                    ? `Estimated remaining: ${remainingQuestionsForModel} questions${typeof remainingCredits === "number" ? ` (${remainingCredits.toFixed(2)} credits left)` : ""}`
+                  {formattedQuestionEstimate
+                    ? `Estimated remaining: ${formattedQuestionEstimate} questions${formattedCredits ? ` (${formattedCredits} credits left)` : ""}`
                     : "Usage estimate unavailable for this key/model."}
                 </p>
               </div>
@@ -215,22 +229,37 @@ export function StartScreen({
             <CardTitle className={`text-lg ${darkMode ? "text-white" : ""}`}>Quick Stats</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="flex justify-between">
-              <span className={darkMode ? "text-gray-300" : "text-gray-600"}>Best Score</span>
-              <span className={`font-bold ${themeClasses.primary.text500}`}>{stats.bestScore}%</span>
-            </div>
-            <div className="flex justify-between">
-              <span className={darkMode ? "text-gray-300" : "text-gray-600"}>Average</span>
-              <span className={darkMode ? "text-white" : ""}>{stats.averageScore}%</span>
-            </div>
-            <div className="flex justify-between">
-              <span className={darkMode ? "text-gray-300" : "text-gray-600"}>Total Exams</span>
-              <span className={darkMode ? "text-white" : ""}>{stats.totalExams}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className={darkMode ? "text-gray-300" : "text-gray-600"}>Best Streak</span>
-              <span className={`font-bold ${themeClasses.accent.text500}`}>{stats.streak}</span>
-            </div>
+            {lastExam ? (
+              <>
+                <div className="flex justify-between">
+                  <span className={darkMode ? "text-gray-300" : "text-gray-600"}>Last Score</span>
+                  <span className={`font-bold ${themeClasses.primary.text500}`}>{lastExam.percentage}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className={darkMode ? "text-gray-300" : "text-gray-600"}>Correct</span>
+                  <span className={darkMode ? "text-white" : ""}>
+                    {lastExam.correct}/{lastExam.total}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className={darkMode ? "text-gray-300" : "text-gray-600"}>Points</span>
+                  <span className={darkMode ? "text-white" : ""}>{lastExam.earnedPoints}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className={darkMode ? "text-gray-300" : "text-gray-600"}>Mode</span>
+                  <span className={`font-bold ${themeClasses.accent.text500}`}>
+                    {lastExam.mode[0].toUpperCase() + lastExam.mode.slice(1)}
+                  </span>
+                </div>
+                <p className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                  Taken: {new Date(lastExam.completedAt).toLocaleString()}
+                </p>
+              </>
+            ) : (
+              <p className={`text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
+                No previous exam yet. Complete one exam to see stats here.
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>

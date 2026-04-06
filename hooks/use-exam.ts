@@ -1,9 +1,9 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { Question, ExamStats, Theme } from "@/lib/exam/types"
+import { Question, ExamStats, LastExamStats } from "@/lib/exam/types"
 import { THEMES, DEFAULT_STATS } from "@/lib/exam/data"
-import { calculateResults, checkAchievements, playSound } from "@/lib/exam/utils"
+import { calculateResults, checkAchievements } from "@/lib/exam/utils"
 import { toast } from "sonner"
 
 interface GenerateQuestionsResponse {
@@ -24,7 +24,7 @@ interface OpenRouterConfigResponse {
 export function useExam() {
   const hasFinalizedRef = useRef(false)
   const [darkMode, setDarkMode] = useState(false)
-  const [currentTheme, setCurrentTheme] = useState<Theme>(THEMES[0])
+  const currentTheme = THEMES[0]
   const [difficulty, setDifficulty] = useState<string>("mixed")
   const [examMode, setExamMode] = useState<"practice" | "timed" | "survival">("practice")
   const [generationPrompt, setGenerationPrompt] = useState("General knowledge")
@@ -46,13 +46,12 @@ export function useExam() {
   const [examStarted, setExamStarted] = useState(false)
   const [showHint, setShowHint] = useState(false)
   const [bookmarkedQuestions, setBookmarkedQuestions] = useState<Set<number>>(new Set())
-  const [soundEnabled, setSoundEnabled] = useState(true)
   const [showExplanation, setShowExplanation] = useState(false)
   const [currentStreak, setCurrentStreak] = useState(0)
   const [examStartTime, setExamStartTime] = useState<number>(0)
   const [stats, setStats] = useState<ExamStats>(DEFAULT_STATS)
+  const [lastExam, setLastExam] = useState<LastExamStats | null>(null)
   const [questions, setQuestions] = useState<Question[]>([])
-  const [activeTab, setActiveTab] = useState("exam")
 
   useEffect(() => {
     if (generationCooldownLeft <= 0) return
@@ -104,6 +103,15 @@ export function useExam() {
     const examDuration = (Date.now() - examStartTime) / 1000
     const categoryStatsDelta: ExamStats["categoryStats"] = {}
 
+    setLastExam({
+      percentage: results.percentage,
+      correct: results.correct,
+      total: results.total,
+      earnedPoints: results.earnedPoints,
+      mode: examMode,
+      completedAt: Date.now(),
+    })
+
     questions.forEach((question, index) => {
       if (!categoryStatsDelta[question.category]) {
         categoryStatsDelta[question.category] = { correct: 0, total: 0 }
@@ -136,25 +144,22 @@ export function useExam() {
       ),
       achievements: checkAchievements(prevStats, results, examDuration, currentStreak),
     }))
-  }, [questions, selectedAnswers, examStartTime, currentStreak])
+  }, [questions, selectedAnswers, examStartTime, currentStreak, examMode])
 
-  const finalizeExam = useCallback((playCompletionSound = true) => {
+  const finalizeExam = useCallback(() => {
     if (hasFinalizedRef.current) return
 
     hasFinalizedRef.current = true
     setShowResults(true)
-    if (playCompletionSound) {
-      playSound("complete", soundEnabled)
-    }
     updateStats()
-  }, [soundEnabled, updateStats])
+  }, [updateStats])
 
   useEffect(() => {
     if (examStarted && timeLeft > 0 && !showResults && examMode === "timed") {
       const timer = setInterval(() => {
         setTimeLeft((prev) => {
           if (prev <= 1) {
-            finalizeExam(false)
+            finalizeExam()
             return 0
           }
           return prev - 1
@@ -173,7 +178,7 @@ export function useExam() {
               setCurrentQuestion(currentQuestion + 1)
               setQuestionTimeLeft(questions[currentQuestion + 1]?.timeLimit || 0)
             } else {
-              finalizeExam(false)
+              finalizeExam()
             }
             return 0
           }
@@ -202,26 +207,22 @@ export function useExam() {
       if (examMode === "survival") {
         if (isCorrect) {
           setCurrentStreak((prev) => prev + 1)
-          playSound("correct", soundEnabled)
         } else {
           setCurrentStreak(0)
-          playSound("incorrect", soundEnabled)
-          finalizeExam(false)
+          finalizeExam()
         }
       }
 
       if (examMode === "practice") {
         if (isCorrect) {
           setCurrentStreak((prev) => prev + 1)
-          playSound("correct", soundEnabled)
         } else {
           setCurrentStreak(0)
-          playSound("incorrect", soundEnabled)
         }
         setShowExplanation(true)
       }
     }
-  }, [showResults, currentQuestion, examMode, questions, soundEnabled, finalizeExam])
+  }, [showResults, currentQuestion, examMode, questions, finalizeExam])
 
   const goToQuestion = useCallback((index: number) => {
     if (index < 0 || index >= questions.length) return
@@ -304,7 +305,7 @@ export function useExam() {
   }, [generationPrompt, questionCount, difficulty, aiModel, examMode, generationCooldownLeft])
 
   const submitExam = useCallback(() => {
-    finalizeExam(true)
+    finalizeExam()
   }, [finalizeExam])
 
   const resetExam = useCallback(() => {
@@ -332,11 +333,6 @@ export function useExam() {
     })
   }, [])
 
-  const resetStats = useCallback(() => {
-    hasFinalizedRef.current = false
-    setStats(DEFAULT_STATS)
-  }, [])
-
   return {
     darkMode,
     currentTheme,
@@ -360,28 +356,23 @@ export function useExam() {
     examStarted,
     showHint,
     bookmarkedQuestions,
-    soundEnabled,
     showExplanation,
     currentStreak,
     stats,
+    lastExam,
     questions,
-    activeTab,
     setDarkMode,
-    setCurrentTheme,
     setDifficulty,
     setExamMode,
     setGenerationPrompt,
     setQuestionCount,
     setAiModel,
-    setSoundEnabled,
     setShowHint,
-    setActiveTab,
     handleAnswerSelect,
     goToQuestion,
     startExam,
     submitExam,
     resetExam,
     toggleBookmark,
-    resetStats,
   }
 }
