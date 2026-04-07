@@ -4,6 +4,8 @@ An interactive examination platform built with **Next.js (App Router)**, **React
 
 Questions are generated through **OpenRouter** and saved to **Supabase** via server API routes.
 
+Live Demo: https://demo-examination-platform.vercel.app/
+
 ## Features
 
 - Practice, timed, and survival exam modes
