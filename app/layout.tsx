@@ -6,7 +6,7 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'Demo Examination Platform',
   icons: {
-    icon: '/favicon.svg',
+    icon: '/favicon-light.svg',
   },
 }
 

@@ -24,8 +24,6 @@ interface StartScreenProps {
   setQuestionCount: (value: number) => void
   aiModel: string
   allowedModels: string[]
-  remainingCredits: number | null
-  remainingQuestionsForModel?: number
   setAiModel: (value: string) => void
   isModelConfigLoading: boolean
   difficulty: string
@@ -54,8 +52,6 @@ export function StartScreen({
   setQuestionCount,
   aiModel,
   allowedModels,
-  remainingCredits,
-  remainingQuestionsForModel,
   setAiModel,
   isModelConfigLoading,
   difficulty,
@@ -69,20 +65,6 @@ export function StartScreen({
   onStart,
 }: StartScreenProps) {
   const themeClasses = getThemeClasses(currentTheme)
-  const formattedCredits =
-    typeof remainingCredits === "number"
-      ? remainingCredits > 0 && remainingCredits < 0.01
-        ? "<0.01"
-        : remainingCredits.toFixed(2)
-      : null
-  const formattedQuestionEstimate =
-    typeof remainingQuestionsForModel === "number"
-      ? remainingQuestionsForModel > 0
-        ? String(remainingQuestionsForModel)
-        : typeof remainingCredits === "number" && remainingCredits > 0
-          ? "<1"
-          : "0"
-      : null
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -156,11 +138,6 @@ export function StartScreen({
                     ))}
                   </SelectContent>
                 </Select>
-                <p className={`text-xs ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
-                  {formattedQuestionEstimate
-                    ? `Estimated remaining: ${formattedQuestionEstimate} questions${formattedCredits ? ` (${formattedCredits} credits left)` : ""}`
-                    : "Usage estimate unavailable for this key/model."}
-                </p>
               </div>
             </div>
 

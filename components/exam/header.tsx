@@ -44,8 +44,12 @@ export function ExamHeader({
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <Brain className="h-8 w-8 text-blue-500" />
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">
+              <Brain className={`h-8 w-8 ${darkMode ? "text-cyan-400" : "text-blue-500"}`} />
+              <h1
+                className={`text-2xl font-bold bg-gradient-to-r bg-clip-text text-transparent ${
+                  darkMode ? "from-cyan-400 to-blue-400" : "from-blue-500 to-cyan-500"
+                }`}
+              >
                 Demo Examination Platform
               </h1>
             </div>

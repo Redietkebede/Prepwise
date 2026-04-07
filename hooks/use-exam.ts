@@ -17,8 +17,6 @@ interface GenerateQuestionsResponse {
 interface OpenRouterConfigResponse {
   defaultModel?: string
   allowedModels?: string[]
-  remainingCredits?: number | null
-  remainingQuestionsByModel?: Record<string, number>
 }
 
 export function useExam() {
@@ -27,12 +25,10 @@ export function useExam() {
   const currentTheme = THEMES[0]
   const [difficulty, setDifficulty] = useState<string>("mixed")
   const [examMode, setExamMode] = useState<"practice" | "timed" | "survival">("practice")
-  const [generationPrompt, setGenerationPrompt] = useState("General knowledge")
+  const [generationPrompt, setGenerationPrompt] = useState("")
   const [questionCount, setQuestionCount] = useState(10)
   const [aiModel, setAiModel] = useState("")
   const [allowedModels, setAllowedModels] = useState<string[]>([])
-  const [remainingCredits, setRemainingCredits] = useState<number | null>(null)
-  const [remainingQuestionsByModel, setRemainingQuestionsByModel] = useState<Record<string, number>>({})
   const [isModelConfigLoading, setIsModelConfigLoading] = useState(true)
   const [isGenerating, setIsGenerating] = useState(false)
   const [generationError, setGenerationError] = useState("")
@@ -61,8 +57,18 @@ export function useExam() {
     return () => clearInterval(timer)
   }, [generationCooldownLeft])
 
-  useEffect(() => {
-    const loadModelConfig = async () => {
+  const loadModelConfig = useCallback(
+    async ({
+      showLoading = true,
+      resetOnError = true,
+    }: {
+      showLoading?: boolean
+      resetOnError?: boolean
+    } = {}) => {
+      if (showLoading) {
+        setIsModelConfigLoading(true)
+      }
+
       try {
         const response = await fetch("/api/config/openrouter")
         const data = (await response.json()) as OpenRouterConfigResponse
@@ -74,29 +80,35 @@ export function useExam() {
               : [backendDefaultModel]
 
           setAllowedModels(backendAllowedModels)
-          setAiModel(
-            backendAllowedModels.includes(backendDefaultModel)
+          setAiModel((currentModel) => {
+            if (currentModel && backendAllowedModels.includes(currentModel)) {
+              return currentModel
+            }
+            return backendAllowedModels.includes(backendDefaultModel)
               ? backendDefaultModel
               : backendAllowedModels[0]
-          )
-          setRemainingCredits(
-            typeof data.remainingCredits === "number" ? data.remainingCredits : null
-          )
-          setRemainingQuestionsByModel(data.remainingQuestionsByModel || {})
-        } else {
+          })
+        } else if (resetOnError) {
           setAiModel("openai/gpt-4o-mini")
           setAllowedModels(["openai/gpt-4o-mini"])
         }
       } catch {
-        setAiModel("openai/gpt-4o-mini")
-        setAllowedModels(["openai/gpt-4o-mini"])
+        if (resetOnError) {
+          setAiModel("openai/gpt-4o-mini")
+          setAllowedModels(["openai/gpt-4o-mini"])
+        }
       } finally {
-        setIsModelConfigLoading(false)
+        if (showLoading) {
+          setIsModelConfigLoading(false)
+        }
       }
-    }
+    },
+    []
+  )
 
+  useEffect(() => {
     void loadModelConfig()
-  }, [])
+  }, [loadModelConfig])
 
   const updateStats = useCallback(() => {
     const results = calculateResults(questions, selectedAnswers)
@@ -342,8 +354,6 @@ export function useExam() {
     questionCount,
     aiModel,
     allowedModels,
-    remainingCredits,
-    remainingQuestionsByModel,
     isModelConfigLoading,
     isGenerating,
     generationError,

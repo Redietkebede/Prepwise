@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect } from "react"
 import { useExam } from "@/hooks/use-exam"
 import { calculateResults } from "@/lib/exam/utils"
 import {
@@ -26,8 +27,6 @@ export default function ExamPlatform() {
     setQuestionCount,
     aiModel,
     allowedModels,
-    remainingCredits,
-    remainingQuestionsByModel,
     setAiModel,
     isModelConfigLoading,
     isGenerating,
@@ -57,6 +56,27 @@ export default function ExamPlatform() {
   const results = calculateResults(questions, selectedAnswers)
   const currentQuestionData = questions[currentQuestion]
 
+  useEffect(() => {
+    const iconHref = darkMode ? "/favicon-dark.svg" : "/favicon-light.svg"
+    const iconLinks = Array.from(
+      document.querySelectorAll<HTMLLinkElement>('link[rel*="icon"]')
+    )
+
+    if (iconLinks.length === 0) {
+      const link = document.createElement("link")
+      link.rel = "icon"
+      link.type = "image/svg+xml"
+      link.href = iconHref
+      document.head.appendChild(link)
+      return
+    }
+
+    iconLinks.forEach((link) => {
+      link.type = "image/svg+xml"
+      link.href = iconHref
+    })
+  }, [darkMode])
+
   return (
     <div className={`min-h-screen text-foreground transition-all duration-300 ${darkMode ? "dark bg-gray-900" : "bg-gray-50"}`}>
       <ExamHeader
@@ -82,8 +102,6 @@ export default function ExamPlatform() {
             setQuestionCount={setQuestionCount}
             aiModel={aiModel}
             allowedModels={allowedModels}
-            remainingCredits={remainingCredits}
-            remainingQuestionsForModel={remainingQuestionsByModel[aiModel]}
             setAiModel={setAiModel}
             isModelConfigLoading={isModelConfigLoading}
             difficulty={difficulty}
