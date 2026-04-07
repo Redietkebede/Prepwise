@@ -40,6 +40,25 @@ It supports multiple exam modes (practice/timed/survival), category & difficulty
 npm install
 ```
 
+### Environment Variables
+
+Create your local env file from the example:
+
+```bash
+cp .env.example .env
+```
+
+Then set these keys in `.env`:
+
+- `OPENROUTER_API_KEY` (required): server-side key used for question generation requests.
+- `OPENROUTER_DEFAULT_MODEL` (optional): default model selected by backend.
+- `OPENROUTER_ALLOWED_MODELS` (optional): comma-separated model allowlist enforced by backend.
+- `SUPABASE_URL` (required): Supabase project URL used for REST inserts.
+- `SUPABASE_SERVICE_ROLE_KEY` (required): server-only Supabase key used by API route storage.
+- `APP_URL` (optional): app URL sent as `HTTP-Referer` header to OpenRouter (for local dev: `http://localhost:3000`).
+
+Important: never commit real secrets in `.env`. Keep `.env.example` as placeholders only.
+
 ### Run the dev server
 
 ```bash
