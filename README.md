@@ -1,38 +1,38 @@
 # Demo Examination Platform
 
-A client-side, interactive examination/quiz experience built with **Next.js (App Router)**, **React**, **TypeScript**, **Tailwind CSS**, and **shadcn/ui**.
+An interactive examination platform built with **Next.js (App Router)**, **React**, **TypeScript**, **Tailwind CSS**, and **shadcn/ui**.
 
-It supports multiple exam modes (practice/timed/survival), category & difficulty filters, per-question hints/explanations, bookmarking, achievements, and statistics persisted to `localStorage`.
+Questions are generated through **OpenRouter** and saved to **Supabase** via server API routes.
 
 ## Features
 
-- **Exam modes**
-  - **Practice**: instant feedback + explanation after each answer
-  - **Timed**: overall countdown (defaults to **1 minute per question**) + optional per-question time limits
-  - **Survival**: keep going until the first incorrect answer
-- **Question experience**: navigation panel, bookmarking, optional hints, optional explanations
-- **Progress & gamification**: streak tracking, achievements, score breakdown
-- **Statistics dashboard**: history counters and per-category performance (saved in `localStorage`)
-- **Theming**: dark mode + accent theme presets
-- **Accessible UI primitives**: shadcn/ui built on Radix UI
+- Practice, timed, and survival exam modes
+- AI-generated multiple-choice questions (OpenRouter)
+- Automatic model retry and fallback on rate limits
+- Generated question persistence in Supabase
+- Local exam stats and achievements (`localStorage`)
+- Dark/light mode with theme-reactive favicon
 
 ## Tech Stack
 
-- **Framework**: Next.js 16 (App Router)
-- **Language**: TypeScript
-- **UI**: React 19, shadcn/ui (Radix UI), Tailwind CSS + `tailwindcss-animate`
-- **Forms & validation (available)**: React Hook Form + Zod
-- **Charts**: Recharts
-- **Icons**: lucide-react
-- **Theming**: next-themes (plus app-level dark mode handling)
-- **Analytics**: @vercel/analytics
-- **Notifications**: sonner
+- Framework: Next.js 16 (App Router)
+- Language: TypeScript
+- UI: React 19, shadcn/ui, Tailwind CSS
+- Icons: lucide-react
+- Notifications: sonner
+- Storage: Supabase REST API
+- LLM Gateway: OpenRouter
+
+## Required Services
+
+- OpenRouter account with an API key
+- Supabase project with a table named `generated_questions_rows`
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js (recommend a modern LTS)
+- Node.js (modern LTS recommended)
 
 ### Install
 
@@ -40,34 +40,60 @@ It supports multiple exam modes (practice/timed/survival), category & difficulty
 npm install
 ```
 
-### Environment Variables
+### Environment Setup
 
-Create your local env file from the example:
+Create local env file:
 
 ```bash
 cp .env.example .env
 ```
 
-Then set these keys in `.env`:
+Set these keys in `.env`:
 
-- `OPENROUTER_API_KEY` (required): server-side key used for question generation requests.
-- `OPENROUTER_DEFAULT_MODEL` (optional): default model selected by backend.
-- `OPENROUTER_ALLOWED_MODELS` (optional): comma-separated model allowlist enforced by backend.
-- `SUPABASE_URL` (required): Supabase project URL used for REST inserts.
-- `SUPABASE_SERVICE_ROLE_KEY` (required): server-only Supabase key used by API route storage.
-- `APP_URL` (optional): app URL sent as `HTTP-Referer` header to OpenRouter (for local dev: `http://localhost:3000`).
+- `OPENROUTER_API_KEY` (required): used by `/api/questions/generate`.
+- `OPENROUTER_DEFAULT_MODEL` (optional): backend default model.
+- `OPENROUTER_ALLOWED_MODELS` (optional): comma-separated allowlist enforced by backend.
+- `SUPABASE_URL` (required): your Supabase project URL.
+- `SUPABASE_SERVICE_ROLE_KEY` (required): server-only key for writes.
+- `APP_URL` (optional): sent to OpenRouter as `HTTP-Referer` (local default: `http://localhost:3000`).
 
-Important: never commit real secrets in `.env`. Keep `.env.example` as placeholders only.
+Important:
 
-### Run the dev server
+- Never commit real secrets in `.env`.
+- Keep `.env.example` as placeholders only.
+- Rotate keys immediately if they were ever committed.
+
+### Supabase Table Setup
+
+Create `generated_questions_rows` in Supabase SQL editor:
+
+```sql
+create table if not exists public.generated_questions_rows (
+  id bigserial primary key,
+  topic text not null,
+  difficulty text not null,
+  model text not null,
+  question text not null,
+  options jsonb not null,
+  correct_answer integer not null,
+  explanation text not null,
+  hint text,
+  category text not null,
+  points integer not null,
+  time_limit integer,
+  created_at timestamptz not null default now()
+);
+```
+
+### Run Development Server
 
 ```bash
 npm run dev
 ```
 
-Then open `http://localhost:3000`.
+Open `http://localhost:3000`.
 
-### Build / Start
+### Build and Start
 
 ```bash
 npm run build
@@ -80,53 +106,51 @@ npm run start
 npm run lint
 ```
 
-## Where Things Live
+## API Flow
 
-- `app/page.tsx`: main exam platform UI (tabs, start flow, question flow, results)
-- `hooks/use-exam.ts`: core state machine (timers, filters, selection, stats, achievements)
-- `lib/exam/data.ts`: **question bank**, themes, achievements, default stats
-- `lib/exam/utils.ts`: scoring, achievements checks, timers, sound
-- `components/exam/*`: exam UI building blocks
-- `components/ui/*`: shadcn/ui components
+- `GET /api/config/openrouter`
+  - Returns `defaultModel` and `allowedModels` from env configuration.
+- `POST /api/questions/generate`
+  - Validates requested model against allowlist.
+  - Calls OpenRouter Chat Completions.
+  - Retries up to 3 times per model on `429`.
+  - Falls back to next allowed model when needed.
+  - Sanitizes generated questions.
+  - Stores rows in Supabase `generated_questions_rows`.
 
-## Customizing Questions
+## Project Structure
 
-Questions currently come from `lib/exam/data.ts` via `EXAM_DATA`.
+- `app/page.tsx`: main app shell and exam flow
+- `hooks/use-exam.ts`: exam state machine and API calls
+- `app/api/config/openrouter/route.ts`: model config endpoint
+- `app/api/questions/generate/route.ts`: generation + persistence endpoint
+- `components/exam/*`: exam UI components
+- `lib/exam/data.ts`: themes, achievements, default stats
+- `lib/exam/utils.ts`: scoring and utility helpers
 
-Each question supports:
+## Deployment Checklist
 
-- `difficulty`: `"easy" | "medium" | "hard"`
-- `category`: string (must match the category key/name you want to filter by)
-- `points`: scoring weight
-- optional `timeLimit` (seconds)
-- optional `hint`
+Before deploying:
 
-Minimal example:
+- Set all required env vars in your host.
+- Ensure `SUPABASE_SERVICE_ROLE_KEY` is configured as a server secret only.
+- Ensure `generated_questions_rows` exists in Supabase.
+- Confirm `APP_URL` matches your deployed domain.
 
-```ts
-{
-  id: 123,
-  question: "What does CSS stand for?",
-  options: ["Cascading Style Sheets", "Computer Style System", "Creative Style Syntax", "Colorful Style Sheets"],
-  correctAnswer: 0,
-  explanation: "CSS stands for Cascading Style Sheets.",
-  difficulty: "easy",
-  category: "Computer Science",
-  points: 10,
-  timeLimit: 30,
-  hint: "It styles web pages"
-}
-```
+## Troubleshooting
+
+- Hydration mismatch in dev:
+  - Stop dev server, delete `.next`, restart, and hard refresh.
+- Favicon not updating:
+  - Hard refresh (`Ctrl+Shift+R`) or clear browser cache.
+- `Server storage is not configured.`:
+  - Missing `SUPABASE_URL` or `SUPABASE_SERVICE_ROLE_KEY`.
+- `Requested model is not allowed by backend configuration.`:
+  - Add model to `OPENROUTER_ALLOWED_MODELS` or choose an allowed model.
+- `All available models are currently rate-limited.`:
+  - Retry after about a minute or use less congested models.
 
 ## Notes
 
-- `next.config.mjs` is configured with `typescript.ignoreBuildErrors: true`, meaning production builds won’t fail on TypeScript errors. If you want stricter CI/builds, consider turning that off.
-- Stats are saved in the browser (`localStorage` key: `examStats`). Bookmarks are currently in-memory only.
-
-## Deployment
-
-This is a standard Next.js app; it deploys cleanly to Vercel and most Node-compatible hosts.
-
----
-
-If you want, I can also add a “Screenshots” section and update the app metadata (title/description) to match the project name.
+- Stats are saved in browser `localStorage` (`examStats`).
+- Bookmarks are currently in-memory only.
